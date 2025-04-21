@@ -18,25 +18,15 @@ public:
     MatrixWorker(int threadIndex, int totalThreads, vector<vector<int>>& matrix)
         : threadIndex(threadIndex), totalThreads(totalThreads), matrix(matrix) {}
 
-    void operator()() 
-    {
+    void operator()() {
         random_device rd;
         mt19937 generator(rd());
         uniform_int_distribution<int> distribution(INT_MIN, INT_MAX);
 
-        for (size_t column = threadIndex; column < matrix.size(); column += totalThreads) 
-        {
-            int minValueInColumn = INT_MAX;
-
-            // Перший прохід: заповнюємо матрицю випадковими числами та шукаємо мінімум у стовпці
-            for (size_t row = 0; row < matrix.size(); row++) 
-            {
+        for (size_t row = 0; row < matrix.size(); row++) {
+            for (size_t column = 0; column < matrix[row].size(); column++) {
                 matrix[row][column] = distribution(generator);
-                minValueInColumn = min(minValueInColumn, matrix[row][column]);
             }
-
-            // Другий прохід: замінюємо елемент побічної діагоналі на мінімум
-            matrix[matrix.size() - column - 1][column] = minValueInColumn;
         }
     }
 };
@@ -48,19 +38,10 @@ void computeSequentially(vector<vector<int>>& matrix)
     mt19937 generator(rd());
     uniform_int_distribution<int> distribution(INT_MIN, INT_MAX);
 
-    for (size_t column = 0; column < matrix.size(); column++) 
-    {
-        int minValueInColumn = INT_MAX;
-
-        // Перший прохід: заповнюємо матрицю випадковими числами та шукаємо мінімум у стовпці
-        for (size_t row = 0; row < matrix.size(); row++) 
-        {
+    for (size_t row = 0; row < matrix.size(); row++) {
+        for (size_t column = 0; column < matrix[row].size(); column++) {
             matrix[row][column] = distribution(generator);
-            minValueInColumn = min(minValueInColumn, matrix[row][column]);
         }
-
-        // Другий прохід: замінюємо елемент побічної діагоналі на мінімум
-        matrix[matrix.size() - column - 1][column] = minValueInColumn;
     }
 
     auto endTime = high_resolution_clock::now();
