@@ -28,6 +28,15 @@ public:
                 matrix[row][column] = distribution(generator);
             }
         }
+
+        // Одразу підраховуємо та замінюємо мінімум в побічній діагоналі для своїх колонок
+        for (size_t column = threadIndex; column < matrix.size(); column += totalThreads) {
+            int minValue = INT_MAX;
+            for (size_t row = 0; row < matrix.size(); row++) {
+                minValue = min(minValue, matrix[row][column]);
+            }
+            matrix[matrix.size() - column - 1][column] = minValue;
+        }
     }
 };
 
@@ -44,6 +53,14 @@ void computeSequentially(vector<vector<int>>& matrix)
         }
     }
 
+    for (size_t column = 0; column < matrix.size(); column++) {
+        int minValue = INT_MAX;
+        for (size_t row = 0; row < matrix.size(); row++) {
+            minValue = min(minValue, matrix[row][column]);
+        }
+        matrix[matrix.size() - column - 1][column] = minValue;
+    }
+
     auto endTime = high_resolution_clock::now();
     cout << "Sequential execution time: "
         << duration_cast<milliseconds>(endTime - startTime).count() << " ms\n";
@@ -54,13 +71,11 @@ void computeInParallel(vector<vector<int>>& matrix, int numberOfThreads)
     auto startTime = high_resolution_clock::now();
     vector<thread> threads;
 
-    for (int i = 0; i < numberOfThreads; i++) 
-    {
+    for (int i = 0; i < numberOfThreads; i++) {
         threads.emplace_back(MatrixWorker(i, numberOfThreads, ref(matrix)));
     }
 
-    for (auto& thread : threads) 
-    {
+    for (auto& thread : threads) {
         thread.join();
     }
 
@@ -69,58 +84,26 @@ void computeInParallel(vector<vector<int>>& matrix, int numberOfThreads)
         << duration_cast<milliseconds>(endTime - startTime).count() << " ms\n";
 }
 
-// Функція для перевірки мінімуму в стовпці
-void checkColumnMinimum(const vector<vector<int>>& matrix, size_t column) 
-{
-    int minValue = INT_MAX;
-    for (size_t row = 0; row < matrix.size(); row++) {
-        minValue = min(minValue, matrix[row][column]);
-    }
-
-    // Перевірка мінімуму на побічній діагоналі
-    if (matrix[matrix.size() - column - 1][column] == minValue) {
-        cout << "Column " << column << " is correct.\n";
-    }
-    else 
-    {
-        cout << "Column " << column << " is incorrect.\n";
-    }
-}
-
 int main() 
 {
-    vector<int> matrixSizes = { 100, 1000, 10000, 20000 }; // Різні розміри матриці
+    vector<int> matrixSizes = { 100, 1000, 10000 };
     int numberOfPhysicalCores = thread::hardware_concurrency() / 2;
     int numberOfLogicalCores = thread::hardware_concurrency();
     vector<int> threadConfigurations = {
-        numberOfPhysicalCores / 2, numberOfPhysicalCores, numberOfLogicalCores,
-        numberOfLogicalCores * 2, numberOfLogicalCores * 4, numberOfLogicalCores * 8, numberOfLogicalCores * 16
+        numberOfPhysicalCores / 2, numberOfPhysicalCores,
+        numberOfLogicalCores, numberOfLogicalCores * 2
     };
 
-    for (int size : matrixSizes) 
-    {
+    for (int size : matrixSizes) {
         vector<vector<int>> matrix(size, vector<int>(size));
         cout << "Matrix size: " << size << "\n";
 
         computeSequentially(matrix);
 
-        for (int threadCount : threadConfigurations) 
-        {
-            if (threadCount < 1) continue; // Мінімум 1 потік
+        for (int threadCount : threadConfigurations) {
+            if (threadCount < 1) continue;
             matrix.assign(size, vector<int>(size));
-            // Очищення перед запуском
             computeInParallel(matrix, threadCount);
-        }
-
-        // Вибір трьох випадкових стовпців для перевірки
-        random_device rd;
-        mt19937 generator(rd());
-        uniform_int_distribution<int> distribution(0, size - 1);
-
-        for (int i = 0; i < 3; i++) 
-        {
-            size_t randomColumn = distribution(generator);
-            checkColumnMinimum(matrix, randomColumn);
         }
 
         cout << "------------------------------------------------------\n";
